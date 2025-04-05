@@ -10,14 +10,11 @@ def extract_pdf(pdf_path):
   if not API_KEY: raise ValueError("MISTRAL_API_KEY environment variable not set")
   
   client = Mistral(api_key=API_KEY)
-
   uploaded_pdf = client.files.upload(
     file={'file_name': os.path.basename(pdf_path), 'content': open(pdf_path, 'rb'),},
     purpose='ocr'
   )
-
   signed_url = client.files.get_signed_url(file_id=uploaded_pdf.id)
-
   ocr_response = client.ocr.process(
     model='mistral-ocr-latest',
     document={'type': 'document_url', 'document_url': signed_url.url,}
@@ -105,7 +102,6 @@ def clean_output(questions):
   for q in questions:
     cleaned_q = {
       'id': q['id'],
-      'section': q.get('section'),
       'question_text': q['question_text'],
       'options': q['options']
     }
@@ -114,13 +110,10 @@ def clean_output(questions):
 
 def process_markdown_exam(text):
   metadata = extract_metadata(text)
-  sections_info = extract_sections_info(text)
   questions = extract_questions(text)
-  questions = associate_sections(questions, sections_info)
   cleaned_questions = clean_output(questions)
   return {
     'metadata': metadata,
-    'sections': sections_info,
     'questions': cleaned_questions
   }
 
@@ -132,35 +125,71 @@ def export_to_json(dataset, output_file='exam_dataset.json'):
 def export_to_csv(dataset, output_file='exam_dataset.csv'):
   with open(output_file, 'w', encoding='utf-8', newline='') as f:
     writer = csv.writer(f)
-    writer.writerow(['ID', 'Section', 'Question', 'Options'])
+    writer.writerow(['ID', 'Question', 'Options'])
     for q in dataset['questions']:
       options_text = ' '.join([f"({key}) {value}" for key, value in sorted(q['options'].items())])
       writer.writerow([
         q['id'],
-        q['section'],
         q['question_text'],
         options_text
       ])
   return output_file
 
+def export_to_md(dataset, output_file='exam_dataset.md'):
+  with open(output_file, 'w', encoding='utf-8') as f:
+    # Write metadata
+    f.write("# Exam Dataset\n\n")
+    if dataset['metadata']:
+      f.write("## Metadata\n\n")
+      for key, value in dataset['metadata'].items():
+        f.write(f"- **{key}**: {value}\n")
+      f.write("\n")
+    
+    # Write sections info
+    if dataset['sections']:
+      f.write("## Sections\n\n")
+      for section, range_info in dataset['sections'].items():
+        f.write(f"- **{section}**: Questions {range_info['start']} to {range_info['end']}\n")
+      f.write("\n")
+    
+    # Write questions
+    f.write("## Questions\n\n")
+    for q in dataset['questions']:
+      f.write(f"### Question {q['id']}\n\n")
+      if q['section']:
+        f.write(f"**Section**: {q['section']}\n\n")
+      f.write(f"{q['question_text']}\n\n")
+      if q['options']:
+        f.write("**Options**:\n\n")
+        for key, value in sorted(q['options'].items()):
+          f.write(f"- ({key}) {value}\n")
+      f.write("\n---\n\n")
+  return output_file
+
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Process exam PDF into structured dataset')
-  parser.add_argument('--pdf', '-p', required=True, help='Path to the PDF file')
-  parser.add_argument('--output', '-o', default='exam_dataset.csv', help='Output CSV filename')
-  parser.add_argument('--json', '-j', default=None, help='Output JSON filename (optional)')
-  parser.add_argument('--skip-ocr', '-s', action='store_true', help='Skip OCR and use existing markdown file')
+  parser = argparse.ArgumentParser(description='Process exam PDF or markdown into structured dataset')
+  parser.add_argument('--pdf', '-p', help='Path to the PDF file')
+  parser.add_argument('--markdown', '-m', help='Path to the markdown file')
+  parser.add_argument('--output', '-o', default=None, help='Output filename base (without extension)')
+  parser.add_argument('--format', '-f', choices=['csv', 'json', 'md', 'all'], default='csv', 
+                      help='Output format: csv, json, md, or all (default: csv)')
   
   args = parser.parse_args()
   
-  print(f"Processing exam from: {args.pdf}")
+  if not args.pdf and not args.markdown:
+    parser.error("Either --pdf or --markdown must be provided")
   
   try:
-    if args.skip_ocr:
-      with open(args.pdf, 'r', encoding='utf-8') as f:
+    if args.markdown:
+      print(f"Processing markdown from: {args.markdown}")
+      with open(args.markdown, 'r', encoding='utf-8') as f:
         markdown_text = f.read()
     else:
+      print(f"Processing PDF from: {args.pdf}")
       markdown_text = extract_pdf(args.pdf)
-      markdown_path = f"{os.path.splitext(args.pdf)[0]}_extracted.md"
+      source_filename = os.path.basename(args.pdf)
+      markdown_path = f"./data/processed/{os.path.splitext(source_filename)[0]}.md"
+      os.makedirs(os.path.dirname(markdown_path), exist_ok=True)
       with open(markdown_path, 'w', encoding='utf-8') as f:
         f.write(markdown_text)
       print(f"Extracted markdown saved to: {markdown_path}")
@@ -168,12 +197,28 @@ if __name__ == '__main__':
     if '\\n' in markdown_text: markdown_text = markdown_text.replace('\\n', '\n')
     
     dataset = process_markdown_exam(markdown_text)
-    csv_file = export_to_csv(dataset, args.output)
-    print(f"CSV dataset exported to: {csv_file}")
     
-    if args.json:
-      json_file = export_to_json(dataset, args.json)
+    # Set output filename base if not provided
+    if not args.output:
+      if args.markdown:
+        output_base = os.path.splitext(args.markdown)[0]
+      else:
+        output_base = os.path.splitext(args.pdf)[0]
+    else:
+      output_base = args.output
+    
+    # Export based on format
+    if args.format == 'csv' or args.format == 'all':
+      csv_file = export_to_csv(dataset, f"{output_base}.csv")
+      print(f"CSV dataset exported to: {csv_file}")
+    
+    if args.format == 'json' or args.format == 'all':
+      json_file = export_to_json(dataset, f"{output_base}.json")
       print(f"JSON dataset exported to: {json_file}")
-                  
+    
+    if args.format == 'md' or args.format == 'all':
+      md_file = export_to_md(dataset, f"{output_base}.md")
+      print(f"Markdown dataset exported to: {md_file}")
+  
   except Exception as e:
     print(f"Error processing exam: {str(e)}")
