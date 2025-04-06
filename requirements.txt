@@ -5,3 +5,5 @@ accelerate
 mistralai
 ipykernel
 pandas
+google-genai
+python-dotenv
