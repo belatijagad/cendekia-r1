@@ -19,3 +19,18 @@ When reopening project, run:
 ```shell
 source .venv/bin/activate
 ```
+
+## Run the Code
+```bash
+python ./src/cendekia_r1 train.py
+python ./src/cendekia_r1 benchmark.py
+```
+
+## Model
+The trained model is stored in this [Huggingface Models](https://huggingface.co/belatijagad/cendekia-r1-zero-qwen-2.5-1.5b-instruct)
+
+## Dataset
+The processed dataset is stored in this [Kaggle Dataset](https://www.kaggle.com/datasets/belati/cendekia-reasoning-math)
+
+## IF THE CODE DOESN'T WORK
+Please refer to this [training code](https://www.kaggle.com/code/belati/cendekia-grpo) and [inference code](https://www.kaggle.com/code/belati/cendekia-experiment).

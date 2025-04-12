@@ -7,3 +7,8 @@ ipykernel
 pandas
 google-genai
 python-dotenv
+unsloth
+trl
+vllm
+datasets
+kaggle
