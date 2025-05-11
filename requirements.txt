@@ -12,3 +12,9 @@ trl
 vllm
 datasets
 kaggle
+python-dotenv
+wheel
+packaging
+huggingface-hub
+wandb
+kaggle
