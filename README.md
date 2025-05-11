@@ -22,8 +22,7 @@ source .venv/bin/activate
 
 ## Run the Code
 ```bash
-python ./src/cendekia_r1 train.py
-python ./src/cendekia_r1 benchmark.py
+accelerate launch --num_processes 3 --config_file deepspeed_zero3.yaml main.py --config config.yaml
 ```
 
 ## Model
