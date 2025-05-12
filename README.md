@@ -14,6 +14,11 @@ For setup, run:
 uv venv .venv --python 3.11 && source .venv/bin/activate && uv pip install --upgrade pip && uv pip install -r requirements.txt
 ```
 
+Install prebuilt flash-attention
+```
+pip install https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.0.5/flash_attn-2.7.4.post1+cu124torch2.6-cp310-cp310-linux_x86_64.whl
+```
+
 When reopening project, run:
 
 ```shell
