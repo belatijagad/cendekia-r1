@@ -16,7 +16,7 @@ uv venv .venv --python 3.11 && source .venv/bin/activate && uv pip install --upg
 
 Install prebuilt flash-attention
 ```
-pip install https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.0.5/flash_attn-2.7.4.post1+cu124torch2.6-cp310-cp310-linux_x86_64.whl
+pip install https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.0.5/flash_attn-2.7.4.post1+cu124torch2.6-cp311-cp311-linux_x86_64.whl
 ```
 
 When reopening project, run:
@@ -25,7 +25,30 @@ When reopening project, run:
 source .venv/bin/activate
 ```
 
+## Setup
+
+Download dataset
+
+```bash
+export KAGGLE_USERNAME=...
+export KAGGLE_KEY=...
+kaggle datasets download belati/cendekia-reasoning-math
+```
+
+```bash
+sudo apt-get install unzip
+unzip cendekia-reasoning-math.zip
+mkdir data
+mv train_data.csv test_data.csv data
+rm cendekia-reasoning-math.zip
+```
+
 ## Run the Code
+
+```
+CUDA_DEVICE_ORDER="PCI_BUS_ID" PYTORCH_NVML_BASED_CUDA_CHECK=1 CUDA_VISIBLE_DEVICES=0,1,2,3
+```
+
 ```bash
 accelerate launch --num_processes 3 --config_file deepspeed_zero3.yaml main.py --config config.yaml
 ```

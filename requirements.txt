@@ -1,5 +1,5 @@
-transformers>=4.37.0
-torch==2.6.0
+transformers
+torch
 numpy
 accelerate
 mistralai
